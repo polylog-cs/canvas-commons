@@ -109,6 +109,9 @@ export interface LayoutProps extends NodeProps {
   anchorX?: SignalValue<number>;
   anchorY?: SignalValue<number>;
   anchor?: SignalValue<PossibleVector2>;
+  translateX?: SignalValue<number>;
+  translateY?: SignalValue<number>;
+  translate?: SignalValue<PossibleVector2>;
   /**
    * The position of the center of this node.
    *
@@ -573,6 +576,14 @@ export class Layout extends Node {
   declare public readonly anchor: Vector2Signal<this>;
 
   /**
+   * A visual offset applied to this node's rendering, analogous to CSS
+   * `transform: translate()`. Does not affect layout.
+   */
+  @initial(Vector2.zero)
+  @vector2Signal('translate')
+  declare public readonly translate: Vector2Signal<this>;
+
+  /**
    * The position of the center of this node.
    *
    * @remarks
@@ -797,10 +808,16 @@ export class Layout extends Node {
 
   public override localToParent(): DOMMatrix {
     const matrix = super.localToParent();
+
+    const translate = this.translate();
+    if (!translate.exactlyEquals(Vector2.zero)) {
+      matrix.translateSelf(translate.x, translate.y);
+    }
+
     const offset = this.anchor();
     if (!offset.exactlyEquals(Vector2.zero)) {
-      const translate = this.size().mul(offset).scale(-0.5);
-      matrix.translateSelf(translate.x, translate.y);
+      const anchorTranslate = this.size().mul(offset).scale(-0.5);
+      matrix.translateSelf(anchorTranslate.x, anchorTranslate.y);
     }
 
     return matrix;
@@ -819,10 +836,15 @@ export class Layout extends Node {
     matrix.rotateSelf(0, 0, this.rotation());
     matrix.scaleSelf(this.scale.x(), this.scale.y());
 
+    const translate = this.translate();
+    if (!translate.exactlyEquals(Vector2.zero)) {
+      matrix.translateSelf(translate.x, translate.y);
+    }
+
     const offset = this.anchor();
     if (!offset.exactlyEquals(Vector2.zero)) {
-      const translate = this.size().mul(offset).scale(-0.5);
-      matrix.translateSelf(translate.x, translate.y);
+      const anchorTranslate = this.size().mul(offset).scale(-0.5);
+      matrix.translateSelf(anchorTranslate.x, anchorTranslate.y);
     }
 
     return matrix;
