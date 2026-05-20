@@ -59,6 +59,16 @@ import {Node, NodeProps} from './Node';
 
 export interface LayoutProps extends NodeProps {
   layout?: LayoutMode;
+  /**
+   * Whether this node participates in its parent's flex layout. When
+   * `null` (the default), falls back to {@link layout}.
+   */
+  layoutSelf?: LayoutMode;
+  /**
+   * Whether this node lays out its own children with flex. When `null`
+   * (the default), falls back to {@link layout}.
+   */
+  layoutChildren?: LayoutMode;
   tagName?: keyof HTMLElementTagNameMap;
 
   width?: SignalValue<Length>;
@@ -204,6 +214,24 @@ export class Layout extends Node {
   @interpolation(boolLerp)
   @signal()
   declare public readonly layout: SimpleSignal<LayoutMode, this>;
+
+  /**
+   * Whether this node participates in its parent's flex layout. Use
+   * {@link layoutEnabled} to read the resolved mode.
+   */
+  @initial(null)
+  @interpolation(boolLerp)
+  @signal()
+  declare public readonly layoutSelf: SimpleSignal<LayoutMode, this>;
+
+  /**
+   * Whether this node lays out its own children with flex. Use
+   * {@link canLayoutChildren} to read the resolved mode.
+   */
+  @initial(null)
+  @interpolation(boolLerp)
+  @signal()
+  declare public readonly layoutChildren: SimpleSignal<LayoutMode, this>;
 
   @initial(null)
   @signal()
@@ -788,22 +816,40 @@ export class Layout extends Node {
   }
 
   /**
-   * Get the resolved layout mode of this node.
-   *
-   * @remarks
-   * When the mode is `null`, its value will be inherited from the parent.
-   *
-   * Use {@link layout} to get the raw mode set for this node (without
-   * inheritance).
+   * Whether this node participates in its parent's flex layout. Resolves
+   * {@link layoutSelf}, then {@link layout}, then the parent's
+   * {@link canLayoutChildren}.
    */
   @computed()
   public layoutEnabled(): boolean {
-    return this.layout() ?? this.parentTransform()?.layoutEnabled() ?? false;
+    return (
+      this.layoutSelf() ??
+      this.layout() ??
+      this.parentTransform()?.canLayoutChildren() ??
+      false
+    );
+  }
+
+  /**
+   * Whether this node lays out its own children with flex. Resolves
+   * {@link layoutChildren}, then {@link layout}, then the parent's
+   * {@link canLayoutChildren}.
+   */
+  @computed()
+  public canLayoutChildren(): boolean {
+    return (
+      this.layoutChildren() ??
+      this.layout() ??
+      this.parentTransform()?.canLayoutChildren() ??
+      false
+    );
   }
 
   @computed()
   public isLayoutRoot(): boolean {
-    return !this.layoutEnabled() || !this.parentTransform()?.layoutEnabled();
+    return (
+      !this.layoutEnabled() || !this.parentTransform()?.canLayoutChildren()
+    );
   }
 
   public override localToParent(): DOMMatrix {
@@ -911,8 +957,8 @@ export class Layout extends Node {
   protected updateLayout() {
     this.applyFont();
     this.applyFlex();
-    if (this.layoutEnabled()) {
-      const children = this.layoutChildren();
+    if (this.canLayoutChildren()) {
+      const children = this.applyLayout();
       for (const child of children) {
         child.updateLayout();
       }
@@ -920,7 +966,7 @@ export class Layout extends Node {
   }
 
   @computed()
-  protected layoutChildren(): Layout[] {
+  protected applyLayout(): Layout[] {
     const queue = [...this.children()];
     const result: Layout[] = [];
     const elements: HTMLElement[] = [];

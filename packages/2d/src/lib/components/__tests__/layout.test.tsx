@@ -1,5 +1,6 @@
-import {Vector2, waitFor} from '@canvas-commons/core';
+import {Vector2, createRef, waitFor} from '@canvas-commons/core';
 import {describe, expect, it} from 'vitest';
+import {useScene2D} from '../../scenes';
 import {Layout} from '../Layout';
 import {generatorTest} from './generatorTest';
 import {mockScene2D} from './mockScene2D';
@@ -41,6 +42,53 @@ describe('Layout', () => {
       layout.translate([0, 0]);
       expect(layout.translate().x).toBe(0);
       expect(layout.position.x()).toBe(10);
+    });
+  });
+
+  describe('layoutSelf / layoutChildren split', () => {
+    it('defaults both to null so the legacy `layout` is the source of truth', () => {
+      const layout = (<Layout layout />) as Layout;
+      expect(layout.layoutSelf()).toBe(null);
+      expect(layout.layoutChildren()).toBe(null);
+      expect(layout.layoutEnabled()).toBe(true);
+      expect(layout.canLayoutChildren()).toBe(true);
+    });
+
+    it('falls back to `layout` when the new signals are null', () => {
+      const off = (<Layout layout={false} />) as Layout;
+      expect(off.layoutEnabled()).toBe(false);
+      expect(off.canLayoutChildren()).toBe(false);
+
+      const on = (<Layout layout />) as Layout;
+      expect(on.layoutEnabled()).toBe(true);
+      expect(on.canLayoutChildren()).toBe(true);
+    });
+
+    it('`layoutSelf` overrides `layout` for the self axis only', () => {
+      const layout = (<Layout layout={false} layoutSelf />) as Layout;
+      expect(layout.layoutEnabled()).toBe(true);
+      expect(layout.canLayoutChildren()).toBe(false);
+    });
+
+    it('`layoutChildren` overrides `layout` for the children axis only', () => {
+      const layout = (<Layout layout layoutChildren={false} />) as Layout;
+      expect(layout.layoutEnabled()).toBe(true);
+      expect(layout.canLayoutChildren()).toBe(false);
+    });
+
+    it('a parent with `layoutChildren=false` stops a layoutSelf=true child from being laid out', () => {
+      const view = useScene2D().getView();
+      const parent = createRef<Layout>();
+      const child = createRef<Layout>();
+      view.add(
+        <Layout ref={parent} layout layoutChildren={false}>
+          <Layout ref={child} layoutSelf />
+        </Layout>,
+      );
+
+      expect(parent().canLayoutChildren()).toBe(false);
+      expect(child().layoutEnabled()).toBe(true);
+      expect(child().isLayoutRoot()).toBe(true);
     });
   });
 
