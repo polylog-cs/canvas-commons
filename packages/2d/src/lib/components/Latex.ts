@@ -14,15 +14,11 @@ import {
   threadable,
   useLogger,
 } from '@canvas-commons/core';
-import {liteAdaptor} from 'mathjax-full/js/adaptors/liteAdaptor.js';
-import {RegisterHTMLHandler} from 'mathjax-full/js/handlers/html.js';
-import {TeX} from 'mathjax-full/js/input/tex.js';
-import {AllPackages} from 'mathjax-full/js/input/tex/AllPackages.js';
-import {mathjax} from 'mathjax-full/js/mathjax.js';
-import {SVG} from 'mathjax-full/js/output/svg.js';
-import {OptionList} from 'mathjax-full/js/util/Options.js';
+import type {OptionList} from '@mathjax/src/js/util/Options.js';
 import {computed, initial, parser, signal} from '../decorators';
 import {AlignedPair, alignSequences} from '../utils/diff';
+import type {LatexFont} from '../utils/mathjax';
+import {loadLatexFont, texToSvg as typesetTex} from '../utils/mathjax';
 import {Curve} from './Curve';
 import {Node} from './Node';
 import {Path} from './Path';
@@ -37,31 +33,12 @@ import {
 } from './SVG';
 import {Txt} from './Txt';
 
-const Adaptor = liteAdaptor();
-RegisterHTMLHandler(Adaptor);
+export {loadLatexFont};
+export type {LatexFont};
 
-const SvgOutputJax = new SVG({fontCache: 'local'});
-const JaxDocument = mathjax.document('', {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  InputJax: new TeX({packages: AllPackages}),
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  OutputJax: SvgOutputJax,
-});
-
-// MathJax sizes the root <svg> in `ex` of its own font. A browser resolves `ex`
-// from the x-height of the container font, which differs between platforms.
-const EX_TO_EM = SvgOutputJax.font.params.x_height;
-
-function rootExToEm(svg: string): string {
-  const rootTagEnd = svg.indexOf('>') + 1;
-  const rootTag = svg
-    .slice(0, rootTagEnd)
-    .replace(
-      /(-?[\d.]+)ex/g,
-      (_, value: string) => `${Number(value) * EX_TO_EM}em`,
-    );
-  return rootTag + svg.slice(rootTagEnd);
-}
+// Stands in for a formula whose font is still loading.
+const EMPTY_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" viewBox="0 0 0 0"></svg>';
 
 /**
  * How a fragment animates into the fragment that replaced it.
@@ -76,6 +53,7 @@ export type LatexTransition = 'morph' | 'partialFade' | 'fade';
 
 export interface LatexProps extends Omit<SVGProps, 'svg'> {
   tex?: SignalValue<string[] | string>;
+  font?: SignalValue<LatexFont>;
   renderProps?: SignalValue<OptionList>;
   fragmentTransition?: SignalValue<LatexTransition>;
   debugFragments?: SignalValue<boolean>;
@@ -213,6 +191,18 @@ export class Latex extends SVGNode {
   declare public readonly options: SimpleSignal<OptionList, this>;
 
   /**
+   * The font to typeset with.
+   *
+   * @remarks
+   * A font other than the default is fetched the first time a formula uses
+   * it, and the scene waits for it before drawing. Use {@link loadLatexFont}
+   * to load it up front.
+   */
+  @initial('mathjax-newcm')
+  @signal()
+  declare public readonly font: SimpleSignal<LatexFont, this>;
+
+  /**
    * How a fragment animates into the fragment that replaced it.
    *
    * @remarks
@@ -268,6 +258,11 @@ export class Latex extends SVGNode {
       return super.calculateWrapperScale(documentSize, parentSize);
     }
     return new Vector2(this.fontSize() / Latex.containerFontSize);
+  }
+
+  protected override collectAsyncResources() {
+    super.collectAsyncResources();
+    this.latexSVG();
   }
 
   @computed()
@@ -368,7 +363,7 @@ export class Latex extends SVGNode {
       return super.parseSVG(svg);
     }
     const subTexs = this.svgSubTexMap[svg].map(sub => sub.trim());
-    const key = `[${subTexs.join(',')}]::${JSON.stringify(this.options())}`;
+    const key = `[${subTexs.join(',')}]::${this.font()}::${JSON.stringify(this.options())}`;
     const cached = Latex.texNodesPool[key];
     if (cached && (cached.size.x > 0 || cached.size.y > 0)) {
       return this.buildDocument(Latex.texNodesPool[key]);
@@ -474,11 +469,17 @@ export class Latex extends SVGNode {
   }
 
   private renderTex(tex: string): {svg: string; error: string | null} {
-    const src = `${tex}::${JSON.stringify(this.options())}`;
-    const svg =
-      Latex.svgContentsPool[src] ??
-      rootExToEm(Adaptor.innerHTML(JaxDocument.convert(tex, this.options())));
-    Latex.svgContentsPool[src] = svg;
+    const font = this.font();
+    const src = `${tex}::${font}::${JSON.stringify(this.options())}`;
+    let svg = Latex.svgContentsPool[src];
+    if (svg === undefined) {
+      const typeset = typesetTex(tex, this.options(), font);
+      if (typeset === null) {
+        return {svg: EMPTY_SVG, error: null};
+      }
+      svg = typeset;
+      Latex.svgContentsPool[src] = svg;
+    }
 
     return {svg, error: svg.match(/data-mjx-error="(.*?)"/)?.[1] ?? null};
   }

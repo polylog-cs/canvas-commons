@@ -110,20 +110,18 @@ import {MetaFile} from '@canvas-commons/core';
           // discover lazily mid-session and re-optimize, forcing a full page
           // reload. The `2d >` prefix resolves them relative to 2d, which
           // isn't a direct consumer dependency. The mathjax entries mirror
-          // the imports in packages/2d/src/lib/components/Latex.ts; mathjax
-          // and parse-svg-path are additionally pure-CommonJS with no ESM
-          // entry, so served raw they break import interop.
+          // the imports in packages/2d/src/lib/utils/mathjax.ts;
+          // parse-svg-path is additionally pure-CommonJS with no ESM entry, so
+          // served raw it breaks import interop.
           include: [
             '@canvas-commons/core > chroma-js',
             '@canvas-commons/2d > @chenglou/pretext',
             '@canvas-commons/2d > @chenglou/pretext/rich-inline',
-            '@canvas-commons/2d > mathjax-full/js/adaptors/liteAdaptor.js',
-            '@canvas-commons/2d > mathjax-full/js/handlers/html.js',
-            '@canvas-commons/2d > mathjax-full/js/input/tex.js',
-            '@canvas-commons/2d > mathjax-full/js/input/tex/AllPackages.js',
-            '@canvas-commons/2d > mathjax-full/js/mathjax.js',
-            '@canvas-commons/2d > mathjax-full/js/output/svg.js',
-            '@canvas-commons/2d > mathjax-full/js/util/Options.js',
+            '@canvas-commons/2d > @mathjax/src/js/adaptors/liteAdaptor.js',
+            '@canvas-commons/2d > @mathjax/src/js/handlers/html.js',
+            '@canvas-commons/2d > @mathjax/src/js/input/tex.js',
+            '@canvas-commons/2d > @mathjax/src/js/mathjax.js',
+            '@canvas-commons/2d > @mathjax/src/js/output/svg.js',
             '@canvas-commons/2d > parse-svg-path',
             '@canvas-commons/2d > yoga-layout',
             '@canvas-commons/2d > @codemirror/language',
