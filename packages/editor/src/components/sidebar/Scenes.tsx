@@ -55,6 +55,7 @@ export function Scenes() {
         >
           All scenes
         </SceneButton>
+        <div className={styles.sceneSeparator} />
         {scenes.map(scene => (
           <SceneItem
             scene={scene}
@@ -63,10 +64,6 @@ export function Scenes() {
           />
         ))}
       </div>
-      <p className={styles.sceneHint}>
-        Only the selected scenes are calculated and played. Ctrl-click to select
-        more than one.
-      </p>
     </Pane>
   );
 }
@@ -85,9 +82,11 @@ function SceneItem({scene, selected, onClick}: SceneItemProps) {
   return (
     <SceneButton selected={selected} title={scene.name} onClick={onClick}>
       <span className={styles.sceneName}>{scene.name}</span>
-      <span className={styles.sceneDuration}>
-        {known ? `${player.status.framesToSeconds(duration).toFixed(1)}s` : '–'}
-      </span>
+      {known && (
+        <span className={styles.sceneDuration}>
+          {player.status.framesToSeconds(duration).toFixed(1)}s
+        </span>
+      )}
     </SceneButton>
   );
 }
