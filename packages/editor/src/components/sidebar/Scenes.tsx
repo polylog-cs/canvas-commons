@@ -8,6 +8,10 @@ import {useSubscribableValue} from '../../hooks';
 import {sceneSelectionSignal} from '../../signals';
 import {Pane} from '../tabs';
 
+const MODIFIER_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
+  ? 'Cmd'
+  : 'Ctrl';
+
 export function Scenes() {
   const {player, renderer} = useApplication();
   const scenes = player.playback.allScenes;
@@ -64,6 +68,9 @@ export function Scenes() {
           />
         ))}
       </div>
+      <p className={styles.sceneHint}>
+        {MODIFIER_KEY}+click to select multiple scenes.
+      </p>
     </Pane>
   );
 }
