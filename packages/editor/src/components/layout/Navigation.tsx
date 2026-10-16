@@ -7,6 +7,7 @@ import {shake} from '../animations';
 import {
   Bug,
   CanvasCommons,
+  Description,
   HourglassBottom,
   Movie,
   School,
@@ -61,6 +62,9 @@ export function Navigation() {
           tab={EditorPanel.VideoSettings}
         >
           <Videocam />
+        </Tab>
+        <Tab title="Scenes" id="scenes-tab" tab={EditorPanel.Scenes}>
+          <Description />
         </Tab>
         {/* eslint-disable-next-line @typescript-eslint/naming-convention */}
         {tabs.map(({name, tabComponent: Component}) => (

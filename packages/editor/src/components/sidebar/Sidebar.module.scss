@@ -58,3 +58,60 @@
     }
   }
 }
+
+.sceneList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sceneSeparator {
+  height: 1px;
+  margin: 6px 0;
+  background-color: var(--surface-color-light);
+}
+
+.scene {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--surface-color-hover);
+  }
+
+  &.selected {
+    background-color: var(--theme-overlay);
+    color: var(--theme-light);
+  }
+}
+
+.sceneName {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneDuration {
+  flex-shrink: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  opacity: 0.7;
+}
+
+.sceneHint {
+  margin-top: 16px;
+  font-size: var(--font-size-small);
+  color: rgba(255, 255, 255, 0.4);
+}

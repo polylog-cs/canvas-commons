@@ -7,6 +7,7 @@ import {
   experimentalLog,
   type Project,
 } from '@canvas-commons/core';
+import {effect} from '@preact/signals';
 import {ComponentChild, render} from 'preact';
 import {Editor} from './Editor';
 import {ProjectData, ProjectSelection} from './ProjectSelection';
@@ -16,7 +17,12 @@ import {
   ShortcutsProvider,
 } from './contexts';
 import GridPlugin from './plugin/GridPlugin';
-import {inspectionSignal, projectNameSignal} from './signals';
+import {
+  inspectionSignal,
+  parseSceneSelection,
+  projectNameSignal,
+  sceneSelectionSignal,
+} from './signals';
 import {getItem, setItem} from './utils';
 
 const ExperimentalHooks = [
@@ -131,6 +137,14 @@ export function editor(project: Project) {
     getItem(frameKey, -1),
   );
   project.plugins.forEach(plugin => plugin.player?.(player));
+
+  // Applied before the first recalculation, so that the stored frame refers to
+  // the restricted timeline and the other scenes are never calculated.
+  const scenesKey = `${project.name}/scenes`;
+  sceneSelectionSignal.value = parseSceneSelection(getItem(scenesKey, null));
+  player.playback.selectScenes(sceneSelectionSignal.value);
+  renderer.selectScenes(sceneSelectionSignal.value);
+  effect(() => setItem(scenesKey, sceneSelectionSignal.value));
 
   player.onStateChanged.subscribe(state => {
     setItem(playerKey, state);

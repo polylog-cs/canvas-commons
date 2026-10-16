@@ -187,7 +187,7 @@ export class Presenter {
   private async reloadScenes(settings: PresenterSettings) {
     for (let i = 0; i < this.project.scenes.length; i++) {
       const description = this.project.scenes[i];
-      const scene = this.playback.onScenesRecalculated.current[i];
+      const scene = this.playback.allScenes[i];
       scene.reload({
         config: description.onReplaced.current.config,
         size: settings.size,

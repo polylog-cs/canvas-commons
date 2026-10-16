@@ -5,6 +5,7 @@ export * from './CanvasCommons';
 export * from './Clear';
 export * from './Close';
 export * from './Colorize';
+export * from './Description';
 export * from './DragIndicator';
 export * from './Earth';
 export * from './FastForward';
