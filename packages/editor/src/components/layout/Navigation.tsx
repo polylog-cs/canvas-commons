@@ -2,12 +2,13 @@ import {LogLevel} from '@canvas-commons/core';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useApplication, usePanels} from '../../contexts';
 import {useReducedMotion} from '../../hooks';
-import {EditorPanel} from '../../signals';
+import {EditorPanel, sceneSelectionSignal} from '../../signals';
 import {shake} from '../animations';
 import {
   Bug,
   CanvasCommons,
   HourglassBottom,
+  Layers,
   Movie,
   School,
   Science,
@@ -23,6 +24,7 @@ export function Navigation() {
   const reducedMotion = useReducedMotion();
   const badge = useRef<HTMLDivElement>();
   const [errorCount, setErrorCount] = useState(logger.onErrorLogged.current);
+  const selectedScenes = sceneSelectionSignal.value;
 
   useEffect(
     () =>
@@ -61,6 +63,20 @@ export function Navigation() {
           tab={EditorPanel.VideoSettings}
         >
           <Videocam />
+        </Tab>
+        <Tab
+          title={
+            selectedScenes
+              ? `Scenes (${selectedScenes.length} selected)`
+              : 'Scenes'
+          }
+          id="scenes-tab"
+          tab={EditorPanel.Scenes}
+        >
+          <Layers />
+          {selectedScenes && (
+            <Badge level={LogLevel.Info}>{selectedScenes.length}</Badge>
+          )}
         </Tab>
         {/* eslint-disable-next-line @typescript-eslint/naming-convention */}
         {tabs.map(({name, tabComponent: Component}) => (

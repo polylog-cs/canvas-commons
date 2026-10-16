@@ -12,6 +12,7 @@ export * from './FastRewind';
 export * from './Fullscreen';
 export * from './Grid';
 export * from './HourglassBottom';
+export * from './Layers';
 export * from './Locate';
 export * from './MapMarkerRadius';
 export * from './Movie';

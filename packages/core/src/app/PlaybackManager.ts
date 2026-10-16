@@ -35,6 +35,7 @@ export class PlaybackManager {
    *
    * @remarks
    * This event indicates that the timing of at least one scene has changed.
+   * Its value contains only the selected scenes, see {@link selectScenes}.
    *
    * @eventProperty
    */
@@ -67,12 +68,52 @@ export class PlaybackManager {
     this.currentSceneReference.current = scene;
   }
 
+  /**
+   * All scenes of the project, including the ones that are not selected.
+   */
+  public get allScenes(): readonly Scene[] {
+    return this.sceneList;
+  }
+
   private currentSceneReference: ValueDispatcher<Scene> | null = null;
   private scenes = new ValueDispatcher<Scene[]>([]);
+  private sceneList: Scene[] = [];
+  private selection: ReadonlySet<string> | null = null;
 
   public setup(scenes: Scene[]) {
+    this.sceneList = scenes;
     this.scenes.current = scenes;
     this.currentScene = scenes[0];
+  }
+
+  /**
+   * Restrict playback to a subset of scenes.
+   *
+   * @remarks
+   * Scenes that are not selected are skipped entirely: they are neither
+   * recalculated nor played. The selected scenes keep their project order.
+   * The change takes effect on the next {@link recalculate}.
+   *
+   * @example
+   * ```ts
+   * playback.selectScenes(['intro', 'outro']);
+   * await playback.recalculate();
+   * ```
+   *
+   * @param names - The names of the scenes to play, or `null` to play all of
+   *                them. If none of the names match, all scenes are played.
+   */
+  public selectScenes(names: readonly string[] | null) {
+    this.selection = names ? new Set(names) : null;
+  }
+
+  private selectedScenes(): Scene[] {
+    const selection = this.selection;
+    if (!selection) {
+      return this.sceneList;
+    }
+    const selected = this.sceneList.filter(scene => selection.has(scene.name));
+    return selected.length > 0 ? selected : this.sceneList;
   }
 
   public async progress() {
@@ -151,14 +192,14 @@ export class PlaybackManager {
 
   public async reset() {
     this.previousScene = null;
-    this.currentScene = this.scenes.current[0];
+    this.currentScene = this.selectedScenes()[0];
     this.frame = 0;
     this.finished = false;
     await this.currentScene.reset();
   }
 
   public reload(description?: SceneDescriptionReload<never>) {
-    this.scenes.current.forEach(scene => scene.reload(description));
+    this.sceneList.forEach(scene => scene.reload(description));
   }
 
   public async recalculate() {
@@ -169,9 +210,14 @@ export class PlaybackManager {
     this.frame = 0;
     this.speed = 1;
 
+    const selected = this.selectedScenes();
+    if (!selected.includes(this.currentScene)) {
+      this.currentScene = selected[0];
+    }
+
     const scenes: Scene[] = [];
     try {
-      for (const scene of this.scenes.current) {
+      for (const scene of selected) {
         await scene.recalculate(frame => {
           this.frame = frame;
         });

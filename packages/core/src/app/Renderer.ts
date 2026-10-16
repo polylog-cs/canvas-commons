@@ -127,6 +127,26 @@ export class Renderer {
   }
 
   /**
+   * Restrict rendering to a subset of scenes.
+   *
+   * @remarks
+   * Both {@link render} and {@link renderFrame} then treat the selected scenes
+   * as the whole animation. Takes effect on the next render.
+   *
+   * @example
+   * ```ts
+   * renderer.selectScenes(['intro']);
+   * await renderer.render(settings);
+   * ```
+   *
+   * @param names - The names of the scenes to render, or `null` to render all
+   *                of them.
+   */
+  public selectScenes(names: readonly string[] | null) {
+    this.playback.selectScenes(names);
+  }
+
+  /**
    * Abort the ongoing render process.
    */
   public abort() {
@@ -263,7 +283,7 @@ export class Renderer {
   private async reloadScenes(settings: RendererSettings) {
     for (let i = 0; i < this.project.scenes.length; i++) {
       const description = this.project.scenes[i];
-      const scene = this.playback.onScenesRecalculated.current[i];
+      const scene = this.playback.allScenes[i];
       scene.reload({
         config: description.onReplaced.current.config,
         size: settings.size,

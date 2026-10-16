@@ -102,6 +102,7 @@ export class Player {
   private requestedSeek = -1;
   private requestedRender = false;
   private requestedRecalculation = true;
+  private requestedSceneSeek: {scene: Scene; offset: number} | null = null;
   private size: Vector2;
   private resolutionScale: number;
   private active = false;
@@ -324,8 +325,36 @@ export class Player {
     }
   }
 
+  /**
+   * Restrict the player to a subset of scenes.
+   *
+   * @remarks
+   * The timeline then consists of the selected scenes only, and the remaining
+   * scenes are not recalculated. If the current scene stays selected, the
+   * playhead stays at the same moment of that scene.
+   *
+   * @example
+   * ```ts
+   * player.selectScenes(['intro']);
+   * // back to the full timeline
+   * player.selectScenes(null);
+   * ```
+   *
+   * @param names - The names of the scenes to play, or `null` to play all of
+   *                them.
+   */
+  public selectScenes(names: readonly string[] | null) {
+    const scene = this.playback.currentScene;
+    this.requestedSceneSeek = {
+      scene,
+      offset: this.playback.frame - scene.firstFrame,
+    };
+    this.playback.selectScenes(names);
+    this.requestRecalculation();
+  }
+
   public setVariables(variables: Record<string, unknown>) {
-    for (const scene of this.playback.onScenesRecalculated.current) {
+    for (const scene of this.playback.allScenes) {
       scene.variables.updateSignals(variables);
     }
   }
@@ -385,6 +414,15 @@ export class Player {
       try {
         await this.playback.recalculate();
         this.duration.current = this.playback.frame;
+
+        const sceneSeek = this.requestedSceneSeek;
+        this.requestedSceneSeek = null;
+        if (sceneSeek) {
+          const selected = this.playback.onScenesRecalculated.current;
+          state.seek = selected.includes(sceneSeek.scene)
+            ? sceneSeek.scene.firstFrame + sceneSeek.offset
+            : 0;
+        }
 
         const sounds: Sound[] = [];
         for (const scene of this.playback.onScenesRecalculated.current) {
